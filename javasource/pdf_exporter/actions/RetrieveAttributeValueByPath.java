@@ -85,7 +85,6 @@ public class RetrieveAttributeValueByPath extends CustomJavaAction<String>
 				}
 				//handles Dates 
 				//TODO: timezone handling
-				//TODO: custom date formats
 				else if (o instanceof Date)
 				{
 					SimpleDateFormat dt = new SimpleDateFormat(curXPath.getDateFormat());
