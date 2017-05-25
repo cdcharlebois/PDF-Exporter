@@ -19,13 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.fileupload.util.LimitedInputStream;
 import org.apache.commons.io.IOUtils;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.multipdf.Overlay;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
-
-import system.proxies.FileDocument;
-import system.proxies.Language;
+import org.apache.pdfbox.pdmodel.PDDocument;
 
 import com.google.common.collect.ImmutableMap;
 import com.mendix.core.Core;
@@ -38,6 +34,9 @@ import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.ISession;
 import com.mendix.systemwideinterfaces.core.IUser;
+
+import system.proxies.FileDocument;
+import system.proxies.Language;
 
 
 public class Misc
@@ -639,7 +638,7 @@ public class Misc
 	 * @throws IOException
 	 * @throws COSVisitorException 
 	 */
-	public static boolean overlayPdf(IContext context, IMendixObject generatedDocumentMendixObject, IMendixObject overlayMendixObject) throws IOException, COSVisitorException {	
+	public static boolean overlayPdf(IContext context, IMendixObject generatedDocumentMendixObject, IMendixObject overlayMendixObject) throws IOException {	
 		ILogNode logger = Core.getLogger("OverlayPdf"); 
 		logger.trace("Retrieve generated document");
 		PDDocument inputDoc = PDDocument.load(Core.getFileDocumentContent(context, generatedDocumentMendixObject));

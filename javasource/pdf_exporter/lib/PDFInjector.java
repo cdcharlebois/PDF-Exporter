@@ -14,18 +14,24 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageTree;
+import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.COSArrayList;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
+//import org.apache.pdfbox.pdmodel.edit.PDPageContentStream; // deprecated in 2.0
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.pdmodel.interactive.form.PDCheckbox;
+import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
+//import org.apache.pdfbox.pdmodel.interactive.form.PDCheckbox; // deprecated in 2.0
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDRadioCollection;
-import org.apache.pdfbox.pdmodel.interactive.form.PDTextbox;
+//import org.apache.pdfbox.pdmodel.interactive.form.PDRadioCollection; // deprecated in 2.0; ignored here.
+import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
+//import org.apache.pdfbox.pdmodel.interactive.form.PDTextbox; // deprecated in 2.0 (see TextField)
 
 import pdf_exporter.proxies.PDFField;
 import pdf_exporter.proxies.PDF_FormType;
@@ -118,8 +124,8 @@ public class PDFInjector {
 				f.setValue(newVal);
 			}
 			
-			if(f instanceof PDCheckbox) {
-				PDCheckbox c = (PDCheckbox)f;
+			if(f instanceof PDCheckBox) {
+				PDCheckBox c = (PDCheckBox)f;
 				if(newVal != null) c.check();
 				else c.unCheck(); 
 			}
@@ -133,7 +139,7 @@ public class PDFInjector {
 		//Get the field list
 		PDDocumentCatalog docCatalog = pdfDoc.getDocumentCatalog();
         PDAcroForm acroForm = docCatalog.getAcroForm();
-		@SuppressWarnings("unchecked")
+//		@SuppressWarnings("unchecked")
 		COSArrayList<PDField> fieldList = (COSArrayList<PDField>) acroForm.getFields();
 
 		//Create a dictionary out of the field list, so we can search it easily
@@ -143,8 +149,9 @@ public class PDFInjector {
 		}
 		
 		Map<String, Integer> fieldPageDict = getFormFieldPageMap(pdfDoc);
-		@SuppressWarnings("unchecked")
-		List<PDPage> docPages = docCatalog.getAllPages();
+//		@SuppressWarnings("unchecked")
+//		List<PDPage> docPages = docCatalog.getAllPages(); deprecated
+		PDPageTree pdPageTree = docCatalog.getPages();
 		
 		//For each field in the form, look for a matching field in the list and update its value
 		//Or if populateFields == false, then write on top of the document"
@@ -156,7 +163,7 @@ public class PDFInjector {
 				if(populateFields) {
 					f.setValue(newVal);
 				} else {					
-					String overflowVal = writeTextOverField(f,newVal, pdfDoc, docPages, fieldPageDict, false, Color.BLACK, PDType1Font.HELVETICA, 10, true);
+					String overflowVal = writeTextOverField(f,newVal, pdfDoc, pdPageTree, fieldPageDict, false, Color.BLACK, PDType1Font.HELVETICA, 10, true);
 					if (overflowVal.length()>0) {
 						String currentAddendumVal = pf.getAddendumValue();
 						if (currentAddendumVal != null && currentAddendumVal.length() > 0)
@@ -166,14 +173,14 @@ public class PDFInjector {
 					}
 				}
 			
-				if(f instanceof PDCheckbox) {
-					PDCheckbox c = (PDCheckbox)f;
+				if(f instanceof PDCheckBox) {
+					PDCheckBox c = (PDCheckBox)f;
 					if(newVal != null) c.check();
 					else c.unCheck(); 
 				}
 			
 				//Lock fields if the boolean says so
-				f.setReadonly(LockFields);
+				f.setReadOnly(LockFields);
 			}
 		}
 		return pdfDoc;
@@ -189,14 +196,15 @@ public class PDFInjector {
 		@SuppressWarnings("unchecked")
 		COSArrayList<PDField> fieldList = (COSArrayList<PDField>) acroForm.getFields();	
 		Map<String, Integer> fieldPageDict = getFormFieldPageMap(pdfDoc);
-		@SuppressWarnings("unchecked")
-		List<PDPage> docPages = docCatalog.getAllPages();
+//		@SuppressWarnings("unchecked")
+//		List<PDPage> docPages = docCatalog.getAllPages();
+		PDPageTree pdPageTree = docCatalog.getPages();
 		
 		//Set the field value to the field's actual name
 		for(PDField c : fieldList) {
 			try 			{
 				String s = c.getFullyQualifiedName();
-				writeTextOverField(c,c.getFullyQualifiedName(), pdfDoc, docPages, fieldPageDict, true, Color.RED, PDType1Font.HELVETICA, 8, false);
+				writeTextOverField(c,c.getFullyQualifiedName(), pdfDoc, pdPageTree, fieldPageDict, true, Color.RED, PDType1Font.COURIER, 8, false);
 			}
 			catch (Exception e) {System.out.println(e);}
 		}
@@ -205,12 +213,12 @@ public class PDFInjector {
 
 	}
 	
-	private static String writeTextOverField(PDField c, String value,PDDocument pdfDoc,List<PDPage> docPages, Map<String,Integer> fieldPageDict, boolean offsetText, Color color, PDFont font, int fontSize, boolean multiline) throws IOException{
+	private static String writeTextOverField(PDField c, String value,PDDocument pdfDoc,PDPageTree docPages, Map<String,Integer> fieldPageDict, boolean offsetText, Color color, PDFont font, int fontSize, boolean multiline) throws IOException{
 		PDPageContentStream contentStream = new PDPageContentStream(pdfDoc, docPages.get(fieldPageDict.get(c.getFullyQualifiedName())-1), true, true, true);
 		String toReturn = "";
 		
 		//If this is a text box, just print the field's name
-		if(c instanceof PDTextbox) {
+		if(c instanceof PDTextField) {
 			PDRectangle cLoc = getFieldArea(c);
 			if(cLoc != null) {
 				if(offsetText) toReturn =  printStringToPDF(value, contentStream,cLoc.getLowerLeftX() ,cLoc.getLowerLeftY()+10, cLoc, color, font, fontSize, multiline);
@@ -218,7 +226,7 @@ public class PDFInjector {
 			}
 		}
 		//If this is a check box, just print the field's name, shifted a bit so it doesn't overlap with the checkbox itself
-		else if(c instanceof PDCheckbox) {
+		else if(c instanceof PDCheckBox) {
 			PDRectangle cLoc = getFieldArea(c);
 			
 			if(cLoc != null) {
@@ -227,27 +235,30 @@ public class PDFInjector {
 			}
 		}
 		//If this is a radio button set, print the name and the child selector names
-		else if(c instanceof PDRadioCollection) {
-			List<COSObjectable> kids = c.getKids();
-			PDField kid0 = (PDField)kids.get(0);
-			PDRectangle cLoc = getFieldArea(kid0);
-			String toPrint = c.getFullyQualifiedName() + " (";
-			for(COSObjectable k: kids) {
-				if(k instanceof PDCheckbox) {
-					PDCheckbox kF = (PDCheckbox)k;
-					toPrint = toPrint + kF.getOnValue() + ",";
-				}
-			}
-			toPrint = toPrint.substring(0,toPrint.length()-1);
-			toPrint = toPrint + ")";
-			
-			if(cLoc != null) 
-				toReturn =  printStringToPDF(toPrint, contentStream, cLoc.getUpperRightX(),cLoc.getUpperRightY(), cLoc, color, font, fontSize, multiline);
-		
-		}
+		/*
+		 * IGNORE RADIO BUTTONS FOR NOW
+		 * */
+//		else if(c instanceof PDRadioCollection) {
+//			List<COSObjectable> kids = c.getKids();
+//			PDField kid0 = (PDField)kids.get(0);
+//			PDRectangle cLoc = getFieldArea(kid0);
+//			String toPrint = c.getFullyQualifiedName() + " (";
+//			for(COSObjectable k: kids) {
+//				if(k instanceof PDCheckBox) {
+//					PDCheckBox kF = (PDCheckBox)k;
+//					toPrint = toPrint + kF.getOnValue() + ",";
+//				}
+//			}
+//			toPrint = toPrint.substring(0,toPrint.length()-1);
+//			toPrint = toPrint + ")";
+//			
+//			if(cLoc != null) 
+//				toReturn =  printStringToPDF(toPrint, contentStream, cLoc.getUpperRightX(),cLoc.getUpperRightY(), cLoc, color, font, fontSize, multiline);
+//		
+//		}
 		
 		//stop the fields from being editable, since there's no point in editing them in the output doc
-		c.setReadonly(true);
+		c.setReadOnly(true);
 				
 		contentStream.close();
 		return toReturn;
@@ -312,7 +323,7 @@ public class PDFInjector {
 			contentStream.beginText();
 			contentStream.setTextTranslation(x, y);		
 	        contentStream.setFont(font, fontSize);
-	        contentStream.drawString(text);
+	        contentStream.showText(text);
 	        contentStream.endText();
 	        return "";
 		}
@@ -330,7 +341,7 @@ public class PDFInjector {
 		  contentStream.appendRawCommands(fontHeight + " TL\n");
 		  contentStream.setTextTranslation( x, y);
 		  for (int i = 0; i < numberOfLines; i++) {
-		    contentStream.drawString(lines.get(i));
+		    contentStream.showText(lines.get(i));
 		    if (i < numberOfLines - 1) {
 		      contentStream.appendRawCommands("T*\n");
 		    }
@@ -341,7 +352,7 @@ public class PDFInjector {
 	protected static PDRectangle getFieldArea(PDField field) {
 		PDRectangle r = null;
 			try {
-				r = field.getWidget().getRectangle();
+				r = field.getWidgets().get(0).getRectangle(); // default to first annotation 
 	        } catch (Exception ex) {
 	            System.out.println("No rectangle available to get");
 	        }		
@@ -352,29 +363,33 @@ public class PDFInjector {
 	protected static Map<String, Integer> getFormFieldPageMap(PDDocument pdfDoc) throws IOException {
 	    PDDocumentCatalog docCatalog = pdfDoc.getDocumentCatalog();
 
-	    List<PDPage> pages = docCatalog.getAllPages();
+//	    List<PDPage> pages = docCatalog.getAllPages();
+	    PDPageTree pdPageTree = docCatalog.getPages();
 	    Map<String, Integer> fieldPageMap = new HashMap<String, Integer>();
 	    Map<COSDictionary, Integer> pageNrByAnnotDict = new HashMap<COSDictionary, Integer>();
-	    for (int i = 0; i < pages.size(); i++) {
-	        PDPage page = pages.get(i);
+	    for (int i = 0; i < pdPageTree.getCount(); i++) {
+	        PDPage page = pdPageTree.get(i);
 	        for (PDAnnotation annotation : page.getAnnotations())
-	            pageNrByAnnotDict.put(annotation.getDictionary(), i + 1);
+	            pageNrByAnnotDict.put(annotation.getCOSObject(), i + 1);
 	    }
 
 	    PDAcroForm acroForm = docCatalog.getAcroForm();
 	    
 	    for (PDField field : (List<PDField>)acroForm.getFields()) {
-	        COSDictionary fieldDict = field.getDictionary();
+	        COSDictionary fieldDict = field.getCOSObject();
 
 	        List<Integer> annotationPages = new ArrayList<Integer>();
-	        List<COSObjectable> kids = field.getKids();
-	        if (kids != null) {
-	            for (COSObjectable kid : kids) {
-	                COSBase kidObject = kid.getCOSObject();
-	                if (kidObject instanceof COSDictionary)
-	                    annotationPages.add(pageNrByAnnotDict.get(kidObject));
-	            }
-	        }
+	        /* 
+	         * IGNORED
+	         */
+//	        List<COSObjectable> kids = field.get();
+//	        if (kids != null) {
+//	            for (COSObjectable kid : kids) {
+//	                COSBase kidObject = kid.getCOSObject();
+//	                if (kidObject instanceof COSDictionary)
+//	                    annotationPages.add(pageNrByAnnotDict.get(kidObject));
+//	            }
+//	        }
 
 	        Integer mergedPage = pageNrByAnnotDict.get(fieldDict);
 
@@ -400,7 +415,7 @@ public class PDFInjector {
 	
 	protected static MXPDField createMXPDField(PDField f, int page) throws Exception{
 		String name = f.getFullyQualifiedName();
-		String value = f.getValue();
+		String value = f.getValueAsString();
 		String parentName = "";
 		String type = f.getClass().getSimpleName();
 		
@@ -409,38 +424,41 @@ public class PDFInjector {
 			parentName = p.getFullyQualifiedName();
 		}
 
-		int length = f.getDictionary().getInt(COSName.getPDFName("MaxLen"));
+		int length = f.getCOSObject().getInt(COSName.getPDFName("MaxLen"));
 		
 		if(length==-1) {
-			COSDictionary parentDict = (COSDictionary) f.getDictionary().getDictionaryObject(COSName.PARENT);
+			COSDictionary parentDict = (COSDictionary) f.getCOSObject().getDictionaryObject(COSName.PARENT);
 			if(parentDict != null) {
 				length = parentDict.getInt(COSName.getPDFName("MaxLen"));
 			}
 		}
 		
 		//If this is a text box, all the fields are set fine by default so do nothing
-		if(f instanceof PDTextbox) {
+		if(f instanceof PDTextField) {
 		}
 		//If this is a check box with a parent, we need to get the "on" value and save that as the name 
-		if(f instanceof PDCheckbox && parentName != null) {	
-			PDCheckbox c =  (PDCheckbox)f;
+		if(f instanceof PDCheckBox && parentName != null) {	
+			PDCheckBox c =  (PDCheckBox)f;
 			name = c.getOnValue();
 		}
 		//If this is a radio button set, all the fields are set fine by default
 		//However, this field type has children, so get those and set their parents properly
 		List<MXPDField> children = new ArrayList<MXPDField>();
-		if(f instanceof PDRadioCollection) {
-			List<COSObjectable> kids = f.getKids();
-			if (kids != null) {
-				for (COSObjectable k: kids) {
-					if (k instanceof PDField) {
-						PDField c = (PDField)k;
-						//recurse to create and add children
-						children.add(createMXPDField(c, page));
-					}
-				}
-			}
-		}
+		/* 
+		 * IGNORED
+		 */
+//		if(f instanceof PDRadioCollection) {
+//			List<COSObjectable> kids = f.getKids();
+//			if (kids != null) {
+//				for (COSObjectable k: kids) {
+//					if (k instanceof PDField) {
+//						PDField c = (PDField)k;
+//						//recurse to create and add children
+//						children.add(createMXPDField(c, page));
+//					}
+//				}
+//			}
+//		}
 		
 		MXPDField pf = new MXPDField(name,value,parentName,type,length,page,children);
 		return pf;
