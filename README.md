@@ -2,11 +2,19 @@
 
 A Mendix module for filling form-enabled PDF files using data in a Mendix application. A test project is included with sample data.
 
+## Dependencies
+
+This module relies on:
+- **Community Commons**
+- **Model Reflection**
+
 ## Configuration
 
 This module works in a very similar way to the Excel Exporter module. The general concept is:
  - configure an output mapping at runtime
  - use the BuildPDF java action with an input entity and this output mapping to genereate a PDF file
+
+ In the Model, you can make your base entity (the one from which you will pull the data to merge into the PDF) a specialization of `PDF_Exporter.AnyObject` and then show the **Template_Select** form to trigger the document generation process.
 
 ## Mapping
 
