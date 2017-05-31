@@ -22,13 +22,16 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 //import org.apache.pdfbox.pdmodel.edit.PDPageContentStream; // deprecated in 2.0
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDSimpleFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.fontbox.afm.*;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
 //import org.apache.pdfbox.pdmodel.interactive.form.PDCheckbox; // deprecated in 2.0
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
+import org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
 //import org.apache.pdfbox.pdmodel.interactive.form.PDRadioCollection; // deprecated in 2.0; ignored here.
 import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 //import org.apache.pdfbox.pdmodel.interactive.form.PDTextbox; // deprecated in 2.0 (see TextField)
@@ -53,9 +56,12 @@ public class PDFInjector {
 		
 		ArrayList<MXPDField> mxFieldList = new ArrayList<MXPDField>();
 		for (PDField f: fieldList) {
-			int page  = fieldPageDict.get(f.getFullyQualifiedName());
-			//call recursive function to get fields and their children
-			mxFieldList.add(createMXPDField(f, page));
+			try {
+				String fullyQualifiedName = f.getFullyQualifiedName();
+				int page  = fieldPageDict.get(fullyQualifiedName);
+				//call recursive function to get fields and their children
+				mxFieldList.add(createMXPDField(f, page));
+			} catch (Exception e) {}
 			
 		}
 		return mxFieldList;
@@ -161,7 +167,9 @@ public class PDFInjector {
 			if (pf != null && pf.getValue() != null) {
 				String newVal = pf.getValue();
 				if(populateFields) {
-					f.setValue(newVal);
+					if (!(f instanceof PDPushButton)){
+						f.setValue(newVal);
+					}
 				} else {					
 					String overflowVal = writeTextOverField(f,newVal, pdfDoc, pdPageTree, fieldPageDict, false, Color.BLACK, PDType1Font.HELVETICA, 10, true);
 					if (overflowVal.length()>0) {
@@ -201,12 +209,18 @@ public class PDFInjector {
 		PDPageTree pdPageTree = docCatalog.getPages();
 		
 		//Set the field value to the field's actual name
+		/* 
+		 * Forget about annotating for now.
+		 */
 		for(PDField c : fieldList) {
 			try 			{
 				String s = c.getFullyQualifiedName();
-				writeTextOverField(c,c.getFullyQualifiedName(), pdfDoc, pdPageTree, fieldPageDict, true, Color.RED, PDType1Font.COURIER, 8, false);
+				PDSimpleFont f = PDType1Font.HELVETICA;
+				Color color = Color.RED;
+				String fullyQualifiedName = c.getFullyQualifiedName();
+				writeTextOverField(c, fullyQualifiedName, pdfDoc, pdPageTree, fieldPageDict, true, color , f, 8, false);
 			}
-			catch (Exception e) {System.out.println(e);}
+			catch (Exception e) {System.out.println(e.getStackTrace());}
 		}
 		
 		return pdfDoc;
